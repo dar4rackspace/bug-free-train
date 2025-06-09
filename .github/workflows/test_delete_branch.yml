@@ -30,7 +30,7 @@ jobs:
 
       - name: Delete Git Branch in Github
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.TOKEN_GITHUB }}
           REPO: ${{ github.repository }}
         run: |
           echo "Attempting to delete branch: $WORKSPACE_NAME from $REPO"
