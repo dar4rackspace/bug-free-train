@@ -28,24 +28,36 @@ jobs:
         run: |
           echo "WORKSPACE_NAME=test" >> $GITHUB_ENV
 
-      - name: Delete Git Branch in Github
+      - name: Delete Git Branch in GitHub
         env:
-          GITHUB_TOKEN: ${{ secrets.TOKEN_GITHUB }}
-          REPO: ${{ github.repository }}
+            GITHUB_TOKEN: ${{ secrets.TOKEN_GITHUB }}
+            REPO: ${{ github.repository }}
+            WORKSPACE_NAME: ${{ env.WORKSPACE_NAME }}
         run: |
-          echo "Attempting to delete branch: $WORKSPACE_NAME from $REPO"
+            echo "Attempting to delete branch: $WORKSPACE_NAME from $REPO"
 
-          # URL encode the branch name (in case of slashes)
-          ENCODED_BRANCH=$(jq -rn --arg b "$WORKSPACE_NAME" '$b|@uri')
-          
-          # Perform DELETE request to GitHub REST API
-          response=$(curl -s -X DELETE \
+            # URL encode the branch name
+            ENCODED_BRANCH=$(jq -rn --arg b "$WORKSPACE_NAME" '$b|@uri')
+
+            # Temp file for response
+            RESPONSE_FILE=$(mktemp)
+
+            # Make API call and capture HTTP status
+            HTTP_STATUS=$(curl -s -o "$RESPONSE_FILE" -w "%{http_code}" -X DELETE \
             -H "Authorization: token $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/$REPO/git/refs/heads/$ENCODED_BRANCH")
 
-          if [ "$response" -ne 204 ]; then
-            echo "Failed to delete branch in Github. HTTP status: $response"
+            if [ "$HTTP_STATUS" -eq 204 ]; then
+            echo "✅ Branch '$WORKSPACE_NAME' deleted successfully."
+            else
+            echo "❌ Failed to delete branch. HTTP status: $HTTP_STATUS"
+            if [ -s "$RESPONSE_FILE" ]; then
+                echo "Response from GitHub:"
+                cat "$RESPONSE_FILE"
+            else
+                echo "No response body returned."
+            fi
             exit 1
-          fi
+            fi
 
